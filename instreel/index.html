@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>リール台本ジェネレーター｜Pure Shining</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', sans-serif;
+    background: #fdf8f5;
+    color: #3a2e2e;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, #c98b8b 0%, #e8b4a0 100%);
+    color: white;
+    padding: 20px;
+    text-align: center;
+  }
+  header h1 { font-size: 18px; font-weight: bold; letter-spacing: 0.05em; }
+  header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+  .container { max-width: 680px; margin: 0 auto; padding: 20px 16px; }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(180,120,100,0.08);
+  }
+  .card h2 {
+    font-size: 14px;
+    color: #c98b8b;
+    margin-bottom: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .card h2::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background: #c98b8b;
+    border-radius: 2px;
+  }
+
+  /* テーマ選択 */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .theme-btn {
+    border: 2px solid #e8d5ce;
+    background: white;
+    border-radius: 10px;
+    padding: 12px 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #5a3a3a;
+    text-align: left;
+    transition: all 0.2s;
+    line-height: 1.5;
+  }
+  .theme-btn .emoji { font-size: 20px; display: block; margin-bottom: 4px; }
+  .theme-btn:hover { border-color: #c98b8b; background: #fdf0ec; }
+  .theme-btn.selected { border-color: #c98b8b; background: #fdf0ec; color: #9a4a4a; font-weight: bold; }
+
+  /* スタイル選択 */
+  .style-row {
+    display: flex;
+    gap: 8px;
+  }
+  .style-btn {
+    flex: 1;
+    border: 2px solid #e8d5ce;
+    background: white;
+    border-radius: 8px;
+    padding: 10px 4px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #5a3a3a;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .style-btn:hover { border-color: #c98b8b; background: #fdf0ec; }
+  .style-btn.selected { border-color: #c98b8b; background: #fdf0ec; color: #9a4a4a; font-weight: bold; }
+
+  /* キーワード入力 */
+  input[type="text"], textarea {
+    width: 100%;
+    border: 1.5px solid #e8d5ce;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #3a2e2e;
+    background: #fdfaf8;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, textarea:focus { border-color: #c98b8b; }
+  textarea { height: 70px; resize: vertical; }
+  .hint { font-size: 11px; color: #aaa; margin-top: 5px; }
+
+  /* 生成ボタン */
+  .generate-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #c98b8b, #e8a898);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s;
+    margin-bottom: 20px;
+  }
+  .generate-btn:hover { opacity: 0.88; }
+  .generate-btn:active { opacity: 0.75; }
+
+  /* 出力エリア */
+  #output { display: none; }
+  .output-section {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(180,120,100,0.08);
+  }
+  .output-section h3 {
+    font-size: 13px;
+    color: #c98b8b;
+    font-weight: bold;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f0e0da;
+  }
+
+  /* フックカード */
+  .hook-cards { display: flex; flex-direction: column; gap: 8px; }
+  .hook-card {
+    border: 1.5px solid #e8d5ce;
+    border-radius: 8px;
+    padding: 12px;
+    position: relative;
+  }
+  .hook-card .hook-num {
+    font-size: 10px;
+    color: #c98b8b;
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  .hook-card .hook-text {
+    font-size: 15px;
+    font-weight: bold;
+    color: #3a2e2e;
+    line-height: 1.6;
+  }
+
+  /* 台本 */
+  .script-block { margin-bottom: 14px; }
+  .script-label {
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    background: #c98b8b;
+    border-radius: 4px;
+    padding: 2px 8px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  .script-label.telop { background: #9b7ea0; }
+  .script-label.voice { background: #c98b8b; }
+  .script-time {
+    font-size: 10px;
+    color: #aaa;
+    margin-left: 6px;
+  }
+  .telop-text {
+    background: #1a1a1a;
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 1.6;
+    letter-spacing: 0.03em;
+  }
+  .voice-text {
+    background: #fdf8f5;
+    border-left: 3px solid #e8b4a0;
+    padding: 8px 12px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #3a2e2e;
+  }
+
+  /* テロップまとめ */
+  .keyphrase-list { display: flex; flex-wrap: wrap; gap: 6px; }
+  .keyphrase-tag {
+    background: #fdf0ec;
+    border: 1px solid #e8b4a0;
+    color: #9a4a4a;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 13px;
+  }
+
+  /* CTA */
+  .cta-box {
+    background: linear-gradient(135deg, #fdf0ec, #f9e8e0);
+    border-radius: 8px;
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #3a2e2e;
+  }
+
+  /* コピーボタン */
+  .copy-btn {
+    background: none;
+    border: 1.5px solid #c98b8b;
+    color: #c98b8b;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    float: right;
+    margin-top: -28px;
+    transition: all 0.2s;
+  }
+  .copy-btn:hover { background: #c98b8b; color: white; }
+
+  /* 再生成 */
+  .regen-btn {
+    width: 100%;
+    background: none;
+    border: 2px solid #c98b8b;
+    color: #c98b8b;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .regen-btn:hover { background: #c98b8b; color: white; }
+
+  @media (max-width: 400px) {
+    .theme-grid { grid-template-columns: 1fr; }
+    .style-row { flex-wrap: wrap; }
+    .style-btn { flex: 0 0 calc(50% - 4px); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌸 リール台本ジェネレーター</h1>
+  <p>Pure Shining｜丘咲ともこ</p>
+</header>
+
+<div class="container">
+
+  <!-- テーマ選択 -->
+  <div class="card">
+    <h2>テーマ軸を選ぶ</h2>
+    <div class="theme-grid">
+      <button class="theme-btn" data-theme="loop" onclick="selectTheme(this)">
+        <span class="emoji">🌀</span>
+        ネガティブループ<br>
+        <small style="color:#999;font-size:11px">落ち込んで自分を責めるループ</small>
+      </button>
+      <button class="theme-btn" data-theme="outside" onclick="selectTheme(this)">
+        <span class="emoji">🔍</span>
+        外側に幸せを探す<br>
+        <small style="color:#999;font-size:11px">〇〇になれば幸せになれる</small>
+      </button>
+      <button class="theme-btn" data-theme="kimaguchi" onclick="selectTheme(this)">
+        <span class="emoji">😶</span>
+        顔色を伺う<br>
+        <small style="color:#999;font-size:11px">人の機嫌に振り回される疲れ</small>
+      </button>
+      <button class="theme-btn" data-theme="habit" onclick="selectTheme(this)">
+        <span class="emoji">💬</span>
+        アラフィフの口癖<br>
+        <small style="color:#999;font-size:11px">知らずに言ってしまう言葉</small>
+      </button>
+      <button class="theme-btn" data-theme="restart" onclick="selectTheme(this)">
+        <span class="emoji">🌱</span>
+        どん底からのリスタート<br>
+        <small style="color:#999;font-size:11px">人生を変えられた実体験</small>
+      </button>
+      <button class="theme-btn" data-theme="free" onclick="selectTheme(this)">
+        <span class="emoji">✏️</span>
+        自由入力<br>
+        <small style="color:#999;font-size:11px">下のキーワードで自由に</small>
+      </button>
+    </div>
+  </div>
+
+  <!-- スタイル選択 -->
+  <div class="card">
+    <h2>台本スタイル</h2>
+    <div class="style-row">
+      <button class="style-btn selected" data-style="empathy" onclick="selectStyle(this)">
+        😢 共感型<br><small style="color:#999;font-size:10px">あなたもそうじゃないですか</small>
+      </button>
+      <button class="style-btn" data-style="awareness" onclick="selectStyle(this)">
+        💡 気づき型<br><small style="color:#999;font-size:10px">実は〇〇だったんです</small>
+      </button>
+      <button class="style-btn" data-style="list" onclick="selectStyle(this)">
+        📋 リスト型<br><small style="color:#999;font-size:10px">3つのパターンで整理</small>
+      </button>
+    </div>
+  </div>
+
+  <!-- キーワード（任意） -->
+  <div class="card">
+    <h2>キーワード（任意）</h2>
+    <input type="text" id="keyword" placeholder="例：感情のループ、パートナーシップ、自己嫌悪">
+    <p class="hint">テーマをさらに絞りたいときに入力。空欄でも台本は生成されます。</p>
+  </div>
+
+  <button class="generate-btn" onclick="generate()">✨ 台本を生成する</button>
+
+  <!-- 出力エリア -->
+  <div id="output">
+
+    <div class="output-section">
+      <h3>📌 冒頭テロップ（フック）3パターン</h3>
+      <p style="font-size:11px;color:#aaa;margin-bottom:10px">最初の1〜2秒に表示する文字。指で止めさせる一言。</p>
+      <div class="hook-cards" id="hooks"></div>
+    </div>
+
+    <div class="output-section">
+      <h3>🎬 60秒リール台本</h3>
+      <p style="font-size:11px;color:#aaa;margin-bottom:12px">
+        <span style="background:#9b7ea0;color:white;border-radius:3px;padding:1px 6px;font-size:10px">テロップ</span>
+        = 画面に出す文字
+        <span style="background:#c98b8b;color:white;border-radius:3px;padding:1px 6px;font-size:10px">ナレーション</span>
+        = 話す内容
+      </p>
+      <div id="script"></div>
+    </div>
+
+    <div class="output-section">
+      <h3>✍️ テロップ用キーフレーズ</h3>
+      <p style="font-size:11px;color:#aaa;margin-bottom:10px">台本の中から特に画面に残したいフレーズ。</p>
+      <div class="keyphrase-list" id="keyphrases"></div>
+    </div>
+
+    <div class="output-section">
+      <h3>📣 CTA文言</h3>
+      <div class="cta-box" id="cta"></div>
+    </div>
+
+    <button class="regen-btn" onclick="generate()">🔄 別パターンで再生成</button>
+
+  </div>
+
+</div>
+
+<script>
+let selectedTheme = '';
+let selectedStyle = 'empathy';
+let variation = 0;
+
+function selectTheme(btn) {
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedTheme = btn.dataset.theme;
+}
+
+function selectStyle(btn) {
+  document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedStyle = btn.dataset.style;
+}
+
+// ── テンプレートデータ ──────────────────────────────────
+
+const data = {
+
+  loop: {
+    hooks: [
+      ['落ち込んだ自分を、またダメだと責める', 'そのループ、ずっと繰り返してませんか？'],
+      ['何かあるたびに、何日も引きずってしまう', '「また私がダメだから」って思ってませんか？'],
+      ['感情に振り回されるのは、意志が弱いからじゃない', 'アラフィフ女性に伝えたいこと'],
+    ],
+    empathy: {
+      blocks: [
+        { time: '0〜3秒',   telop: '落ち込んだ自分を、またダメだと責める', voice: '落ち込んだ自分を、またダメだと責める。そのループ、ずっと繰り返してませんか？' },
+        { time: '3〜20秒',  telop: '何か失敗する\n↓\n落ち込む\n↓\n落ち込んだ自分をまたダメだと責める\n↓\nまた落ち込む', voice: '何かひとつ失敗すると落ち込んで、その落ち込んだ自分を「またネガティブな私、ダメな私」ってまた責めて…そしてまた落ち込む。このループ、何年も繰り返してきませんでしたか？' },
+        { time: '20〜40秒', telop: 'これは意志が弱いんじゃなくて\n「自分はダメな人間だ」という\n思い込みが動かしてる', voice: 'これ、意志が弱いとか、メンタルが弱いとかじゃないんです。「自分はどうせダメな人間だ」という思い込みが、無意識に自分を責めるほうへ引っ張ってるんです。' },
+        { time: '40〜55秒', telop: '思い込みに気づいて\n自分の土台を整えると\nループから抜けられる', voice: 'その思い込みの根っこに気づいて、自分の内側の土台を整えると、感情のループからちゃんと抜けられます。私自身も、それで変わることができました。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'もっと詳しく知りたい方は、プロフのLINEから無料体験セッション案内しています。保存して、あとで読み返してみてください。' },
+      ],
+      keyphrases: ['落ち込んだ自分を、またダメだと責める', 'このループ、何年も繰り返してきた', '意志が弱いんじゃなくて思い込みが動かしてる', '土台を整えるとループから抜けられる'],
+    },
+    awareness: {
+      blocks: [
+        { time: '0〜3秒',   telop: '感情のループが止まらない本当の理由', voice: '感情のループが止まらない、本当の理由をお話しします。' },
+        { time: '3〜20秒',  telop: '頑張っても頑張っても\n気分が落ちる\nなんで？', voice: '頑張ってるのに、何かあるたびに気分が落ちる。立ち直ろうとしても、また落ちる。これって、なんで起きるんでしょう？' },
+        { time: '20〜40秒', telop: '実は…\n「自分はダメ」という\n設定が書き込まれてる', voice: '実はね、幼いころに刷り込まれた「自分はどうせダメな人間だ」という設定が、今も無意識に動いているんです。だから感情が揺れるたびに、そこに引き戻されてしまう。' },
+        { time: '40〜55秒', telop: '設定を書き換えると\n感情に振り回されなくなる', voice: 'この設定に気づいて、内側から書き換えていくと、同じ出来事があっても、感情に振り回されなくなっていきます。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['感情のループが止まらない本当の理由', '「自分はダメ」という設定が書き込まれてる', '設定を書き換えると振り回されなくなる'],
+    },
+    list: {
+      blocks: [
+        { time: '0〜3秒',   telop: '感情のループにはまる\n3つのパターン', voice: '感情のループにはまる、3つのパターンをお話しします。' },
+        { time: '3〜20秒',  telop: '①失敗→何日も引きずる\n②落ち込んだ自分をまた責める\n③人の不機嫌が自分のせいに感じる', voice: '1つ目、何か失敗すると何日も引きずってしまう。2つ目、落ち込んだ自分をまたダメだと責めてしまう。3つ目、誰かが不機嫌だと、まず自分のせいだと感じてしまう。' },
+        { time: '20〜40秒', telop: 'これ全部\n「自分はダメ」という\n思い込みのせい', voice: 'この3つ、全部つながっています。根っこにあるのは「自分はどうせダメだ」という思い込み。これがあると、あらゆる出来事をネガティブに解釈してしまうんです。' },
+        { time: '40〜55秒', telop: '思い込みの根っこを変えると\n3つ全部がラクになる', voice: '思い込みの根っこを変えると、この3つ全部がラクになります。私自身もそうでしたし、セッションのクライアントさんたちも変わっていっています。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['感情のループにはまる3つのパターン', '全部「自分はダメ」という思い込みのせい', '根っこを変えると3つ全部ラクになる'],
+    },
+  },
+
+  outside: {
+    hooks: [
+      ['「結婚すれば幸せになれる」', 'そう信じてた時期がありました。'],
+      ['〇〇になれば幸せになれる、を何度繰り返したか', '幸せのスイッチを全部外側に置いてた'],
+      ['夫が変わってくれたら。仕事が変われば。', 'そう思い続けて、何年経ちましたか？'],
+    ],
+    empathy: {
+      blocks: [
+        { time: '0〜3秒',   telop: '「結婚すれば幸せになれる」\nそう信じてた時期がありました', voice: '「結婚すれば幸せになれる」。そう信じていた時期が、私にもありました。' },
+        { time: '3〜20秒',  telop: '結婚しても幸せにならなかった\n子供が生まれても\n仕事を持っても\nお金が増えても…', voice: '結婚してみたら、全然幸せじゃなかった。子供が生まれたら幸せになれると思ったけど、ワンオペでクタクタ。仕事を持てば、お金を稼げば…って頑張ってきたけど、一向に幸せにはなれなかった。' },
+        { time: '20〜40秒', telop: '人生を変えるスイッチを\n全部、外側に置いてた\nそれじゃ自分のハンドル\n握れない', voice: '今思うと、人生を変えるスイッチを全部外側に置いていたんですよね。誰かが変わってくれたら、何かが変われば…って。それじゃ、自分の人生のハンドル、ずっと握れないんです。' },
+        { time: '40〜55秒', telop: '外側の条件で幸せになろうとするのをやめたとき\nはじめて人生が動き始めた', voice: '外側の条件で幸せになろうとするのをやめて、自分の内側を整えることに向き合ったとき、はじめて人生が動き始めました。幸せも、人生の主導権も、内側にちゃんとあったんです。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['人生を変えるスイッチを全部外側に置いてた', '自分のハンドル、ずっと握れない', '外側の条件で幸せになるのをやめたとき人生が動いた'],
+    },
+    awareness: {
+      blocks: [
+        { time: '0〜3秒',   telop: '幸せになれない本当の理由', voice: '幸せになれない、本当の理由をお伝えします。' },
+        { time: '3〜20秒',  telop: '夫が変われば\nお金が増えれば\n環境が変われば…\nって思ってませんか？', voice: '夫が変わってくれたら。お金が増えたら。もっといい環境になれば…。そう思って、ずっと待ってきませんでしたか？' },
+        { time: '20〜40秒', telop: '実は…\n幸せは\n外側にはない', voice: '実はね、外側の条件がどれだけ整っても、内側が変わらない限り幸せは感じられないんです。幸せを感じる仕組み、全部、内側にあるんです。' },
+        { time: '40〜55秒', telop: '内側の土台を整えると\n同じ現実でも\n見え方が変わる', voice: '内側の土台を整えていくと、同じ現実でもまったく違って見えてきます。私自身がそれを経験して、今は自分の選択で人生を進められています。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['幸せを感じる仕組みは全部内側にある', '外側の条件が整っても内側が変わらない限り幸せは感じられない', '同じ現実でも見え方が変わる'],
+    },
+    list: {
+      blocks: [
+        { time: '0〜3秒',   telop: '外側に幸せを求めてしまう\n3つのパターン', voice: '外側に幸せを求めてしまう、3つのパターンをお話しします。' },
+        { time: '3〜20秒',  telop: '①「〇〇になれば幸せ」\n②誰かが変わってくれるのを待つ\n③環境が変われば変われると思う', voice: '1つ目、〇〇になれば幸せになれるという条件付き幸せ。2つ目、夫や家族が変わってくれるのを待ち続ける。3つ目、転職や引越しで環境を変えれば自分も変われると思う。' },
+        { time: '20〜40秒', telop: 'この3つ全部\n幸せのスイッチを\n外側に置いてる状態', voice: 'この3つ、全部共通しているのは、幸せのスイッチを外側に置いているということ。外側は自分でコントロールできないから、いつまで待っても幸せはやってこない。' },
+        { time: '40〜55秒', telop: 'スイッチを内側に取り戻すと\n人生のハンドルを\n自分で握れるようになる', voice: 'スイッチを内側に取り戻すと、人生のハンドルを自分で握れるようになります。私自身もそこからすべてが変わっていきました。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['幸せのスイッチを外側に置いてる状態', 'いつまで待っても幸せはやってこない', 'スイッチを内側に取り戻す'],
+    },
+  },
+
+  kimaguchi: {
+    hooks: [
+      ['誰かが不機嫌だと、まず自分のせいだと思う', 'それ、ずっとやってきませんでしたか？'],
+      ['人の顔色を読んで、毎日クタクタ', 'アラフィフ女性に多いパターンです'],
+      ['「怒らせたかな」「嫌われたかな」', 'その心配、何十年続いてますか？'],
+    ],
+    empathy: {
+      blocks: [
+        { time: '0〜3秒',   telop: '誰かが不機嫌だと\nまず自分のせいだと思う', voice: '誰かが不機嫌だと、まず「私が何かしたかな」と思う。それ、ずっとやってきませんでしたか？' },
+        { time: '3〜20秒',  telop: '怒らせたかな\n嫌われたかな\nあの一言で傷つけたかな\n…毎日クタクタ', voice: '怒らせたかな、嫌われたかな、あの一言で傷つけたかな…。人とコミュニケーションするたびに消耗して、毎日クタクタ。こんなに気疲れするのはなんで？って思ったことありませんか。' },
+        { time: '20〜40秒', telop: '幼いころから\n「人を怒らせてはいけない」\nが染み付いてる', voice: '実はこれ、意志が弱いとかじゃなくて。幼いころに「人を怒らせてはいけない、機嫌を損ねてはいけない」が刷り込まれていると、大人になってもずっとそのアンテナが立ち続けてしまうんです。' },
+        { time: '40〜55秒', telop: 'その刷り込みを手放すと\n人間関係がラクになる', voice: 'その刷り込みに気づいて手放していくと、人間関係がびっくりするくらいラクになります。私自身も、それを経験しました。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['誰かが不機嫌だとまず自分のせいだと思う', '人とコミュニケーションするたびに消耗する', '刷り込みを手放すと人間関係がラクになる'],
+    },
+    awareness: {
+      blocks: [
+        { time: '0〜3秒',   telop: '人の顔色を読み続ける\n本当の理由', voice: '人の顔色を読み続けてしまう、本当の理由をお伝えします。' },
+        { time: '3〜20秒',  telop: '「また気を遣いすぎた」\n「また疲れた」\nって思ってませんか？', voice: '「また気を遣いすぎた」「また疲れた」って、コミュニケーションのたびに感じてませんか？' },
+        { time: '20〜40秒', telop: '実は…\n「怒らせてはいけない」が\nアンテナになってる', voice: '実はこれ、幼いころに「人を怒らせてはいけない、嫌われてはいけない」という経験が積み重なって、それがずっと自動で動いているアンテナになっているんです。' },
+        { time: '40〜55秒', telop: 'アンテナの設定を変えると\n疲れずに自分らしくいられる', voice: 'そのアンテナの設定を変えていくと、人の顔色に振り回されずに、自分らしくいられるようになります。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['「怒らせてはいけない」がアンテナになってる', 'アンテナの設定を変える', '疲れずに自分らしくいられる'],
+    },
+    list: {
+      blocks: [
+        { time: '0〜3秒',   telop: '顔色を伺ってしまう\n3つのサイン', voice: '顔色を伺ってしまう、3つのサインをお話しします。' },
+        { time: '3〜20秒',  telop: '①誰かが不機嫌だと自分のせいだと思う\n②「また怒らせたかな」が頭をよぎる\n③コミュニケーションの後でどっと疲れる', voice: '1つ目、誰かが不機嫌だとまず自分のせいだと感じてしまう。2つ目、「また怒らせたかな、嫌われたかな」が何度も頭をよぎる。3つ目、人と話した後でどっと疲れる。' },
+        { time: '20〜40秒', telop: 'この3つ、全部\n「人の機嫌の責任を\n自分が取ってる」状態', voice: 'この3つ、全部「人の機嫌の責任を自分が取ってしまっている」状態です。それは誰かに刷り込まれた役割で、本来あなたの責任じゃない。' },
+        { time: '40〜55秒', telop: 'その役割を手放すと\n人間関係が一気にラクになる', voice: 'その役割に気づいて手放すと、人間関係が一気にラクになります。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['人の機嫌の責任を自分が取ってる状態', 'その役割は本来あなたのものじゃない', '役割を手放すと人間関係がラクになる'],
+    },
+  },
+
+  habit: {
+    hooks: [
+      ['「どうせ私には無理」が\n口癖になってませんか？', 'アラフィフ女性に多いパターン'],
+      ['「私さえ我慢すれば」\nって口癖になってる', 'その我慢、何年続いてますか？'],
+      ['「また私がダメだから」\nって言ってませんか？', 'その言葉、誰に教わりましたか？'],
+    ],
+    empathy: {
+      blocks: [
+        { time: '0〜3秒',   telop: '「どうせ私には無理」\nが口癖になってませんか？', voice: '「どうせ私には無理」。これ、口癖になってませんか？' },
+        { time: '3〜20秒',  telop: 'やってみたい、でも…\nどうせ無理\n私なんかが\nうまくいくわけない', voice: 'やってみたいな、と思っても「でもどうせ私には無理」「私なんかがうまくいくわけない」って。気づいたら、何かチャレンジしようとするたびにブレーキが踏まれてませんか。' },
+        { time: '20〜40秒', telop: 'その口癖\nずっと昔に\n「自分を守るため」に\n作った言葉かもしれない', voice: 'その「どうせ無理」という言葉、実は幼いころに傷つかないために自分を守るために作った言葉かもしれないんです。大人になっても、無意識にその言葉が出続けてしまっている。' },
+        { time: '40〜55秒', telop: 'その口癖の奥にある\n思い込みを変えると\n動けるようになる', voice: 'その口癖の奥にある思い込みを変えていくと、自然に前に踏み出せるようになります。私自身も「私なんか幸せになれるわけない」が当たり前だったのに、今は全然違う人生を生きています。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['「どうせ私には無理」が口癖になってる', '傷つかないために作った言葉', '思い込みを変えると動けるようになる'],
+    },
+    awareness: {
+      blocks: [
+        { time: '0〜3秒',   telop: '口癖が人生を作ってるという話', voice: '口癖が人生を作っている、というお話をします。' },
+        { time: '3〜20秒',  telop: '「どうせ私には無理」\n「私さえ我慢すれば」\n「また私がダメだから」\n…毎日言ってませんか？', voice: '「どうせ私には無理」「私さえ我慢すれば」「また私がダメだから」。毎日、自分にこんな言葉をかけ続けていませんか？' },
+        { time: '20〜40秒', telop: '実は…\n口癖は潜在意識への\n繰り返しの命令', voice: '実はね、口癖って、潜在意識への繰り返しの命令なんです。「無理」と言い続けると、潜在意識が「そうか、無理なんだ」と動かなくなっていく。' },
+        { time: '40〜55秒', telop: '口癖を変えると\n潜在意識が書き換えられて\n動きはじめる', voice: '逆に言うと、口癖を変えると潜在意識が書き換えられて、人生が動き始めます。まず気づくことが最初の一歩。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['口癖は潜在意識への繰り返しの命令', '「無理」と言い続けると動かなくなる', '口癖を変えると人生が動き始める'],
+    },
+    list: {
+      blocks: [
+        { time: '0〜3秒',   telop: 'アラフィフ女性の\n要注意な口癖3つ', voice: 'アラフィフ女性の、要注意な口癖を3つお伝えします。' },
+        { time: '3〜20秒',  telop: '①「どうせ私には無理」\n②「私さえ我慢すれば」\n③「また私がダメだから」', voice: '1つ目、「どうせ私には無理」。2つ目、「私さえ我慢すれば」。3つ目、「また私がダメだから」。' },
+        { time: '20〜40秒', telop: 'この3つ、言ってみてください\nどれか刺さりませんか？', voice: 'この3つ、心の中で言ってみてください。どれかひとつでも「あ、これよく言ってる」ってなりませんか？' },
+        { time: '40〜55秒', telop: 'この口癖が出てきたら\nそれ、自分への思い込みが\n動いてるサイン', voice: 'この口癖が出てきたら、それはインナーの思い込みが動いているサインです。口癖に気づくことが、変化の最初の一歩になります。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['アラフィフ女性の要注意な口癖3つ', '口癖が出たらインナーの思い込みが動いてるサイン', '気づくことが変化の最初の一歩'],
+    },
+  },
+
+  restart: {
+    hooks: [
+      ['「私なんか幸せになれるわけない」\nって本気で思ってた。', 'それが今は…'],
+      ['元夫の借金300万が発覚したとき\n人生終わったと思った', 'でも、そこからが始まりだった'],
+      ['不幸な人生は変えられない\nって疑いもなく信じてた', 'アラフィフの私が変われた話'],
+    ],
+    empathy: {
+      blocks: [
+        { time: '0〜3秒',   telop: '「私なんか幸せになれるわけない」\nって本気で思ってた', voice: '「私なんか幸せになれるわけない」。それを疑いもなく、本気で信じていた時期がありました。' },
+        { time: '3〜20秒',  telop: '元夫の借金、ワンオペ\n夜のお弁当屋バイト\n身体も精神も限界\n「この人生はもう終わりだ」', voice: 'ワンオペで子育てしながら、元夫の借金返済のために夜のお弁当屋で働いて。身体も精神も限界で、「この不幸な人生、もう変えられない」と本気で思っていました。' },
+        { time: '20〜40秒', telop: '打つ手がなくなったとき\nやっと聞こえた\n自分の声', voice: 'もうこれ以上打つ手がない、というところまで追い詰められたとき、やっと自分の心の声に気づけた。「まず、私が幸せにならなければ」って。' },
+        { time: '40〜55秒', telop: '自分の内側を整えたら\n人生が動き始めた\n今の主人とも\n信頼関係を築けている', voice: '自分の内側の土台を整えることに集中したら、人生が動き始めました。今は感情に振り回されず、今の主人とは深い信頼関係を築けています。「同じ人なの？」って言われるくらい変わりました。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['打つ手がなくなったときやっと聞こえた自分の声', '「まず私が幸せにならなければ」', '「同じ人なの？」と言われるくらい変わった'],
+    },
+    awareness: {
+      blocks: [
+        { time: '0〜3秒',   telop: '人生を変えるきっかけは\nどん底にあった', voice: '人生を変えるきっかけは、どん底にありました。' },
+        { time: '3〜20秒',  telop: 'いくら頑張っても\nうまくいかない\n何かが根本的に\nおかしい', voice: 'いくら頑張っても、外側をどう変えても、全然うまくいかない。何かが根本的におかしいと感じたこと、ありませんか？' },
+        { time: '20〜40秒', telop: '実は…\n外側を変えようとしてる限り\n何も変わらない', voice: '実はね、外側を変えようとしている限り、何も変わらないんです。私がどん底で気づいたのも、まさにそれでした。「私が変わるしかない」と。' },
+        { time: '40〜55秒', telop: '内側を整えると\n外側の現実が変わり始める\nそれが潜在意識の仕組み', voice: '内側を整えると、外側の現実が変わり始める。それが潜在意識の仕組みです。どん底まで行った私が、今こうして幸せな人生を生きているのが何よりの証明です。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['外側を変えようとしている限り何も変わらない', '「私が変わるしかない」', '内側を整えると外側の現実が変わり始める'],
+    },
+    list: {
+      blocks: [
+        { time: '0〜3秒',   telop: '人生が変わり始めた\n3つの転換点', voice: '私の人生が変わり始めた、3つの転換点をお話しします。' },
+        { time: '3〜20秒',  telop: '①「外側への期待」をやめた\n②自分の心の声を聴くようにした\n③自分の土台を整えることに集中した', voice: '1つ目、誰かが変わってくれることへの期待をやめた。2つ目、追い詰められてやっと自分の心の声を聴くようにした。3つ目、自分の内側の土台を整えることだけに集中した。' },
+        { time: '20〜40秒', telop: 'この3つをやったとき\nはじめて人生が\n動き始めた', voice: 'この3つをやったとき、はじめて人生が動き始めました。外側は何も変えていないのに、全然違う景色が見えてきたんです。' },
+        { time: '40〜55秒', telop: 'アラフィフはリスタートできる\n私がその証明', voice: 'アラフィフからでも人生はリスタートできます。私自身がその証明です。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['外側への期待をやめた', '外側は何も変えていないのに全然違う景色が見えた', 'アラフィフはリスタートできる・私がその証明'],
+    },
+  },
+
+  free: {
+    hooks: [
+      ['アラフィフになって\n「私の人生、こんなはずじゃなかった」\nと思ったことはありますか？'],
+      ['変わりたいのに変われない\nそのループ、抜け出せます'],
+      ['自分を幸せにするって\nどうすればいいかわからない\nそんなあなたへ'],
+    ],
+    empathy: {
+      blocks: [
+        { time: '0〜3秒',   telop: 'アラフィフになって\n「私の人生こんなはずじゃなかった」\nと思ったことはありますか？', voice: 'アラフィフになって「私の人生、こんなはずじゃなかった」と思ったことはありますか？' },
+        { time: '3〜20秒',  telop: '頑張ってきた\nでも幸せじゃない\nどうすればいいか\nわからない', voice: 'ずっと頑張ってきた。でも幸せじゃない。変わりたいけど、どうすればいいかわからない。そんな気持ち、ずっと抱えてきませんでしたか？' },
+        { time: '20〜40秒', telop: '幸せになれないのは\n意志が弱いから\nでも努力不足でもない', voice: '幸せになれないのは、意志が弱いからでも、努力が足りないからでもないんです。ただ、幸せになる方向が「外側」に向いていただけ。' },
+        { time: '40〜55秒', telop: '方向を「内側」に変えると\n人生が動き始める', voice: '方向を「内側」に変えて、自分の土台を整えていくと、人生が動き始めます。アラフィフは人生を仕上げていくリスタート期。今からでも、絶対に変われます。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['幸せになれないのは努力不足じゃない', '方向が「外側」に向いていただけ', 'アラフィフは人生を仕上げていくリスタート期'],
+    },
+    awareness: {
+      blocks: [
+        { time: '0〜3秒',   telop: '変わりたいのに変われない\n本当の理由', voice: '変わりたいのに変われない、本当の理由をお伝えします。' },
+        { time: '3〜20秒',  telop: 'セミナーに行っても\n本を読んでも\n変われない\nなんで？', voice: 'セミナーに行っても、本を読んでも、知識を得ても変われない。なんで変われないんだろう？って思ったことありませんか？' },
+        { time: '20〜40秒', telop: '実は…\n知識を得るだけでは\n潜在意識は変わらない', voice: '実はね、知識を得るだけでは潜在意識は変わらないんです。頭ではわかっていても、身体とエネルギーの深いところに刷り込みが残っている。' },
+        { time: '40〜55秒', telop: '潜在意識の深いところを\n変えていくと\nナチュラルに変わっていける', voice: '潜在意識の深いところを変えていくと、頑張らなくても、ナチュラルに変わっていけます。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['知識を得るだけでは潜在意識は変わらない', '身体とエネルギーの深いところの刷り込み', '頑張らなくてもナチュラルに変わっていける'],
+    },
+    list: {
+      blocks: [
+        { time: '0〜3秒',   telop: 'アラフィフ女性が\n人生を変えるために\n必要な3つのこと', voice: 'アラフィフ女性が人生を変えるために必要な3つのことをお話しします。' },
+        { time: '3〜20秒',  telop: '①外側への期待を手放すこと\n②自分の内側の声を聴くこと\n③土台をつくること', voice: '1つ目、誰かや何かに幸せにしてもらおうという期待を手放すこと。2つ目、自分の内側の声を聴くこと。3つ目、揺れない自分の土台をつくること。' },
+        { time: '20〜40秒', telop: 'この3つが揃うと\n外側が変わらなくても\n人生の見え方が変わる', voice: 'この3つが揃うと、外側の状況が変わらなくても、人生の見え方がまったく変わります。' },
+        { time: '40〜55秒', telop: 'アラフィフはリスタートできる\n今が一番早い', voice: 'アラフィフは人生を仕上げていくリスタート期。今が一番早いタイミングです。' },
+        { time: '55〜60秒', telop: 'プロフのLINEから\n無料体験セッション受け付けてます\n保存してね🌸', voice: 'プロフのLINEから無料体験セッション、ご案内しています。保存してあとで読み返してみてください。' },
+      ],
+      keyphrases: ['外側への期待を手放す', '自分の内側の声を聴く', '揺れない自分の土台をつくる', 'アラフィフは今が一番早いタイミング'],
+    },
+  },
+};
+
+// ── 生成ロジック ──────────────────────────────────
+
+function generate() {
+  if (!selectedTheme) {
+    alert('テーマ軸を選んでください');
+    return;
+  }
+
+  variation = (variation + 1) % 3;
+  const theme = data[selectedTheme];
+  const styleData = theme[selectedStyle] || theme['empathy'];
+  const hookIndex = variation;
+
+  // フック
+  const hooksEl = document.getElementById('hooks');
+  hooksEl.innerHTML = '';
+  theme.hooks.forEach((h, i) => {
+    const card = document.createElement('div');
+    card.className = 'hook-card';
+    card.innerHTML = `
+      <div class="hook-num">パターン ${i + 1}</div>
+      <div class="hook-text">${h.join('<br>')}</div>
+    `;
+    hooksEl.appendChild(card);
+  });
+
+  // 台本
+  const scriptEl = document.getElementById('script');
+  scriptEl.innerHTML = '';
+  styleData.blocks.forEach(b => {
+    const div = document.createElement('div');
+    div.className = 'script-block';
+    div.innerHTML = `
+      <div>
+        <span class="script-label telop">テロップ</span>
+        <span class="script-time">${b.time}</span>
+      </div>
+      <div class="telop-text" style="white-space:pre-line">${b.telop}</div>
+      <div style="height:6px"></div>
+      <div><span class="script-label voice">ナレーション</span></div>
+      <div class="voice-text">${b.voice}</div>
+    `;
+    scriptEl.appendChild(div);
+  });
+
+  // キーフレーズ
+  const kpEl = document.getElementById('keyphrases');
+  kpEl.innerHTML = '';
+  styleData.keyphrases.forEach(kp => {
+    const tag = document.createElement('span');
+    tag.className = 'keyphrase-tag';
+    tag.textContent = kp;
+    kpEl.appendChild(tag);
+  });
+
+  // CTA
+  document.getElementById('cta').innerHTML = `
+    もっと詳しく知りたい方は<br>
+    プロフのLINEから<strong>無料体験セッション</strong>のご案内をしています。<br>
+    <br>
+    LINE ID：<strong>@961lncup</strong><br>
+    <br>
+    「保存してあとで読み返してみてください」と添えて締めましょう🌸
+  `;
+
+  document.getElementById('output').style.display = 'block';
+  document.getElementById('output').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+
+</body>
+</html>
