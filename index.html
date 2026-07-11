@@ -373,7 +373,7 @@
   <div class="card ai-card">
     <h2>🤖 AIで新しい切り口を作る</h2>
     <input type="text" id="aiTheme" placeholder="例：更年期の孤独感、義理の親との距離感 など自由に">
-    <p class="hint">上のテーマ一覧にない切り口を、その場でAIに書いてもらいます。上の「キーワード」欄も一緒に使えます。生成には数秒〜20秒ほどかかることがあります。</p>
+    <p class="hint">上のテーマ一覧にない切り口を、その場でAIに書いてもらいます。上の「キーワード」欄も一緒に使えます。品質チェックを含めて生成するため、1分ほどお待ちいただくことがあります。</p>
     <button class="generate-btn ai-generate-btn" id="aiGenerateBtn" style="margin-top:10px" onclick="generateAI()">✨ AIで生成する</button>
   </div>
 
@@ -1734,7 +1734,7 @@ async function generateAI() {
   const btn = document.getElementById('aiGenerateBtn');
   const originalLabel = btn.textContent;
   btn.disabled = true;
-  btn.textContent = '✨ 生成中…（数秒〜20秒ほどお待ちください）';
+  btn.textContent = '✨ 生成中…（品質チェック込みで1分ほどお待ちください）';
 
   try {
     const res = await fetch(WORKER_URL, {
